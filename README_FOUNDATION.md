@@ -28,6 +28,7 @@ The pipeline (`azure-pipelines.yml`):
 
 ## Setup Steps
 
+
 ### 1. Create Azure DevOps Service Connection
 
 In your Azure DevOps project:
@@ -75,32 +76,37 @@ The pipeline will automatically trigger on push to `main` and deploy your agent.
 
 ## Local Testing / Manual Deployment
 
-You can also deploy your agent locally using the helper script:
+Deploy your agent locally using the Python script (`scripts/deploy_agent.py`), which uses the **Azure AI Projects SDK**:
+
+**With command-line arguments:**
 
 ```bash
-# Make the script executable
-chmod +x scripts/deploy_to_foundry.sh
+# Install dependencies
+pip install azure-ai-projects azure-identity pyyaml
 
 # Log in to Azure (if not already logged in)
 az login
 
-# Deploy the agent
-./scripts/deploy_to_foundry.sh agent.yaml my-ai-project my-foundry-rg my-hub
+# Run the deployment script with arguments
+python scripts/deploy_agent.py ad-usa-poc <your-hub-name> adusa-poc-agent agent.yaml
 ```
 
-Or use the Azure CLI directly:
+**Or with environment variables:**
 
 ```bash
-# Install/update AI CLI extension
-az extension add -n ai --upgrade -y
+export FOUNDRY_RESOURCE_GROUP=ad-usa-poc
+export FOUNDRY_HUB_NAME=<your-hub-name>
+export FOUNDRY_PROJECT_NAME=adusa-poc-agent
+export AGENT_YAML_PATH=agent.yaml
 
-# Create or update agent
-az ai agent create-or-update \
-  --resource-group my-foundry-rg \
-  --hub-name my-hub \
-  --definition agent.yaml \
-  --project my-ai-project
+python scripts/deploy_agent.py
 ```
+
+The script will:
+1. Load and validate your `agent.yaml`
+2. Authenticate to Azure using your credentials
+3. Deploy (or update) the agent in the specified Foundry project
+4. Print the agent ID and status
 
 ## Agent YAML Reference
 

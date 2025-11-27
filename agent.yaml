@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://aka.ms/microsoft-foundry-vsc/agent/1.0.0
 # version of the agent schema
 version: 1.0.0
-name: New Agent
+name: weather-agent
 
 # Give a description of your agent. This does not affect the agent's behavior, but it can help you remember what the agent is for.
 # Please use instructions to define the agent's behavior. 
@@ -13,16 +13,13 @@ id: ""
 
 #metadata for the agent, uncommented those lines if you want to add metadata
 metadata:
-  authors:
-    - platform_team
-  tags:
-    - env:nonprd
-    - env:nonprd-dev
+  author: "platform_team"
+  tag: "env:nonprd"
 
 # model id of the agent, can not be empty
 # Press SPACE to view a list of models currently connected to your project.
 model:
-  id: ""
+  id: "gpt-5-mini"
   options:
     temperature: 1
     top_p: 1
@@ -36,16 +33,19 @@ instructions: >-
 
   - average temparature for the past 10 days
 
-  - average temparature prediction for next 10 days
+  - average temparature prediction for next 15 days
 
 
   Make sure we keep the response concise
 
-tools:      
-- type: openapi
-  id: GetCurrentWeather
-  description: Retrieves current weather data for a specified city.
-  options:
-    specification: https://api.weatherapi.com/v1/current.json
-    auth:
-      type: none
+tools: []
+# Add OpenAPI tools by uncommenting the example below and updating with your API details:
+#
+# tools:
+#   - type: openapi
+#     id: WeatherAPI
+#     description: Fetch current weather data for any city
+#     options:
+#       specification: https://your-openapi-spec-url.com/openapi.json
+#       auth:
+#         type: anonymous

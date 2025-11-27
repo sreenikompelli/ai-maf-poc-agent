@@ -1,0 +1,13 @@
+# Azure AI and Identity
+azure-ai-projects==2.0.0b1
+azure-ai-agents==1.1.0
+azure-identity==1.25.1
+
+# YAML and environment configuration
+pyyaml==6.0.3
+python-dotenv==1.2.1
+
+# Core dependencies
+requests==2.32.5
+aiohttp==3.13.2
+cryptography==46.0.3
