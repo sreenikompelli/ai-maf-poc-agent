@@ -6,7 +6,7 @@ trigger:
 variables:
   # Configure these as pipeline variables or in a Variable Group in Azure DevOps
   - name: AGENT_YAML_PATH
-    value: 'agents/agent.yaml'
+    value: 'agents/simple-agent.yaml'
   - name: FOUNDRY_ENDPOINT
     value: 'https://adusa-poc-agent.services.ai.azure.com/api/projects/adusa-poc-agent'
   - name: AZURE_SERVICE_CONNECTION
@@ -21,18 +21,14 @@ stages:
     pool: 'egen-agent-pool'
     steps:
     - checkout: self
-    - script: |
-        mkdir -p /azp/_work/_tool
-        ln -s /azp/_work/_tool /opt/hostedtoolcache
-      displayName: "Symlink Python Tools Directory to Agent Tools Directory"
-    - task: UsePythonVersion@0
-      displayName: "install Python 3.11"
-      inputs:
-        versionSpec: 3.11
     
-
     - bash: |
-        pip install -r requirements.txt
+        python3 --version
+        which python3
+      displayName: 'Check Python version'
+    
+    - bash: |
+        pip3 install -r requirements.txt
       displayName: 'Install Python dependencies from requirements.txt'
     
     - bash: |
@@ -43,7 +39,7 @@ stages:
         echo "=========================================="
         
         # Run the external deployment script
-        python scripts/deploy_agent.py \
+        python3 scripts/deploy_agent.py \
           "$(FOUNDRY_ENDPOINT)" \
           "$(AGENT_YAML_PATH)"
         
