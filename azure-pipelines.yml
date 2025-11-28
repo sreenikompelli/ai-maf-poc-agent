@@ -19,7 +19,7 @@ stages:
   jobs:
   - job: PublishAgent
     pool:
-      vmImage: 'ms-agent-pool'
+      vmImage: 'egen-agent-pool'
     steps:
     - checkout: self
     
