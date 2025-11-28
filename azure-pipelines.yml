@@ -28,23 +28,8 @@ stages:
       displayName: 'Check Python version'
     
     - bash: |
-        pip3 install -r requirements.txt
-      displayName: 'Install Python dependencies from requirements.txt'
-    
-    - bash: |
-        set -euo pipefail
-        
-        echo "=========================================="
-        echo "Deploying agent to Azure AI Foundry"
-        echo "=========================================="
-        
-        # Run the external deployment script
-        python3 scripts/deploy_agent.py \
-          "$(FOUNDRY_ENDPOINT)" \
-          "$(AGENT_YAML_PATH)"
-        
-        echo ""
-        echo "Agent deployment completed successfully"
-      displayName: 'Deploy agent to Foundry'
-      env:
-        AZURE_SUBSCRIPTION_ID: $(System.AccessToken)
+        python3 -m venv venv
+        . venv/bin/activate
+        pip install -r requirements.txt
+        python scripts/deploy_agent.py "$(FOUNDRY_ENDPOINT)" "$(AGENT_YAML_PATH)"
+      displayName: 'Install dependencies and deploy'
