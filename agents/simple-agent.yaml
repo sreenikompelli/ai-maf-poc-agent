@@ -38,4 +38,11 @@ instructions: >-
 
   Make sure we keep the response concise
 
-tools: []
+tools:
+  - type: openapi
+    id: WebSearch
+    description: Search the web for information on any topic
+    options:
+      specification: https://raw.githubusercontent.com/Azure/azure-sdk-for-python/main/sdk/ai/azure-ai-projects/assets/web_search_openapi.json
+      auth:
+        type: anonymous
