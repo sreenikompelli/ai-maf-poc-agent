@@ -177,6 +177,7 @@ def deploy_agent(
             definition=PromptAgentDefinition(
                 model=model_id,
                 instructions=agent_def.get('instructions', 'You are a helpful assistant that answers general questions'),
+                tools=agent_create_params.get('tools')
             ),
         )
 

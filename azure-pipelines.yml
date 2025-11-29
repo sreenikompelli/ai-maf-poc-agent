@@ -27,6 +27,15 @@ stages:
         which python3
       displayName: 'Check Python version'
     
+    - task: AzureCLI@2
+      inputs:
+        azureSubscription: '$(AZURE_SERVICE_CONNECTION)'
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          echo "✓ Authenticated to Azure"
+      displayName: 'Authenticate to Azure'
+    
     - bash: |
         python3 -m venv .venv
         . .venv/bin/activate

@@ -39,13 +39,3 @@ instructions: >-
   Make sure we keep the response concise
 
 tools: []
-# Add OpenAPI tools by uncommenting the example below and updating with your API details:
-#
-# tools:
-#   - type: openapi
-#     id: WeatherAPI
-#     description: Fetch current weather data for any city
-#     options:
-#       specification: https://your-openapi-spec-url.com/openapi.json
-#       auth:
-#         type: anonymous
