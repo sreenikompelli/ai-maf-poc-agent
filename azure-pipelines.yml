@@ -10,7 +10,7 @@ variables:
   - name: FOUNDRY_ENDPOINT
     value: 'https://adusa-poc-agent.services.ai.azure.com/api/projects/adusa-poc-agent'
   - name: AZURE_SERVICE_CONNECTION
-    value: 'Azure-Subscription'
+    value: 'ado-service-connection'
 
 stages:
 
