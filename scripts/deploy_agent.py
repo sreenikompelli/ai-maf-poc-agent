@@ -22,7 +22,7 @@ import os
 import yaml
 from pathlib import Path
 from azure.ai.projects import AIProjectClient
-from azure.identity import DefaultAzureCredential
+from azure.identity import DefaultAzureCredential, AzureCliCredential
 #from azure.ai.projects.models import ImageBasedHostedAgentDefinition, ProtocolVersionRecord, AgentProtocol
 from azure.ai.projects.models import PromptAgentDefinition
 
@@ -57,53 +57,30 @@ def validate_agent_definition(agent_def: dict) -> None:
         raise ValueError("model must be a dict with 'id' field in agent.yaml")
 
 
-def convert_tools_from_yaml(tools_yaml: list) -> list:
+# Import the registry function
+from tools.registry import build_tools_from_yaml
+
+def convert_tools_from_yaml(tools_yaml: list, project_client: AIProjectClient = None) -> list:
     """
-    Convert tool definitions from YAML format to SDK-compatible dicts.
+    Convert tool definitions from YAML format to SDK-compatible objects
+    using the centralized registry.
     
     Args:
         tools_yaml: List of tool definitions from agent.yaml
+        project_client: Optional AIProjectClient instance (needed for some tools)
     
     Returns:
-        List of tool dictionaries compatible with SDK
+        List of Tool objects compatible with SDK
     """
     if not tools_yaml:
         return []
     
-    sdk_tools = []
-    for tool_yaml in tools_yaml:
-        tool_type = tool_yaml.get('type')
-        
-        if tool_type == 'openapi':
-            # Convert OpenAPI tool from YAML to SDK-compatible dict
-            tool_id = tool_yaml.get('id', 'unknown_tool')
-            description = tool_yaml.get('description', '')
-            options = tool_yaml.get('options', {})
-            
-            # Get the OpenAPI spec URL
-            spec = options.get('specification')
-            if not spec:
-                raise ValueError(f"Missing 'specification' in OpenAPI tool: {tool_id}")
-            
-            # Create tool dict in SDK format
-            tool_dict = {
-                'type': 'openapi',
-                'openapi': {
-                    'name': tool_id,
-                    'description': description,
-                    'spec': {
-                        'url': spec
-                    },
-                    'auth': {
-                        'type': 'anonymous'
-                    }
-                }
-            }
-            sdk_tools.append(tool_dict)
-        else:
-            print(f"⚠ Unsupported tool type: {tool_type}, skipping")
+    # Use the registry to build tools
+    # Note: The registry expects 'project_client' as the first argument, 
+    # but we might not have it fully initialized if we are just validating.
+    # However, for deployment, we should pass it if possible.
     
-    return sdk_tools
+    return build_tools_from_yaml(project_client, tools_yaml)
 
 
 def deploy_agent(
@@ -137,15 +114,34 @@ def deploy_agent(
     
     # Initialize Azure AI Projects client
     try:
-        credential = DefaultAzureCredential()
+        # Try DefaultAzureCredential first (checks environment, az cli, managed identity, etc.)
+        credential = DefaultAzureCredential(exclude_shared_token_cache_credential=False)
         client = AIProjectClient(
             endpoint=endpoint,
             credential=credential
         )
-        print("✓ Connected to Azure AI Foundry\n")
+        print("✓ Connected to Azure AI Foundry (using DefaultAzureCredential)\n")
     except Exception as e:
-        print(f"✗ Failed to connect to Foundry: {e}")
-        raise
+        print(f"✗ Failed to connect to Foundry with DefaultAzureCredential")
+        print(f"  Error details: {e}\n")
+        
+        # Try AzureCliCredential explicitly (for Azure DevOps pipeline)
+        try:
+            from azure.identity import AzureCliCredential
+            print("  Attempting to use Azure CLI credentials...")
+            credential = AzureCliCredential()
+            client = AIProjectClient(
+                endpoint=endpoint,
+                credential=credential
+            )
+            print("✓ Connected to Azure AI Foundry (using Azure CLI credentials)\n")
+        except Exception as cli_error:
+            print(f"✗ Failed with Azure CLI credentials: {cli_error}")
+            print("\n  Please ensure:")
+            print("    1. You have run 'az login' or authenticated via Azure DevOps")
+            print("    2. You have access to the Foundry project endpoint")
+            print("    3. Your credentials have appropriate permissions")
+            raise
     
     # Prepare agent creation parameters
     try:
@@ -161,7 +157,7 @@ def deploy_agent(
         
         # Convert and add tools if present
         if 'tools' in agent_def and agent_def['tools']:
-            sdk_tools = convert_tools_from_yaml(agent_def['tools'])
+            sdk_tools = convert_tools_from_yaml(agent_def['tools'], project_client=client)
             if sdk_tools:
                 print(f"Tools: {len(sdk_tools)} tool(s) configured")
                 agent_create_params['tools'] = sdk_tools

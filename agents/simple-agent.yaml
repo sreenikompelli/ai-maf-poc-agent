@@ -40,7 +40,7 @@ instructions: >-
 
 tools:
   - type: openapi
-    id: WebSearch
+    id: todosearch
     description: Search the web for information on any topic
     options:
       specification: https://raw.githubusercontent.com/Azure/azure-sdk-for-python/main/sdk/ai/azure-ai-projects/assets/web_search_openapi.json
