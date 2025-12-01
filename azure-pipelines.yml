@@ -39,5 +39,5 @@ stages:
           pip install -r requirements.txt
           # az cli automatically sets up auth context
           # Now run the deployment script which will use az cli credentials via DefaultAzureCredential
-          .venv/bin/python scripts/deploy_agent.py "$(FOUNDRY_ENDPOINT)" "$(AGENT_YAML_PATH)"
+          .venv/bin/python -m scripts.deploy_agent "$(FOUNDRY_ENDPOINT)" "$(AGENT_YAML_PATH)"
       displayName: 'Install dependencies and deploy agent'

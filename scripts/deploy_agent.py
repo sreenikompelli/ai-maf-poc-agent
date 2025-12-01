@@ -57,8 +57,6 @@ def validate_agent_definition(agent_def: dict) -> None:
         raise ValueError("model must be a dict with 'id' field in agent.yaml")
 
 
-# Add the project root to sys.path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Import the registry function
 from tools.registry import build_tools_from_yaml
