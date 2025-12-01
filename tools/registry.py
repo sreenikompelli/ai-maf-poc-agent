@@ -79,13 +79,20 @@ def build_tools_from_yaml(project_client: AIProjectClient, tools_cfg: List[Dict]
             # If a connection_id is provided for the tool itself (not just auth)
             connection_id = options.get("connection_id")
 
-            tools.append(
-                OpenApiAgentTool(
-                    name=tool_id,
-                    spec_url=spec_url,
-                    connection_id=connection_id
+            # Only pass supported arguments (spec_url, connection_id)
+            if connection_id:
+                tools.append(
+                    OpenApiAgentTool(
+                        spec_url=spec_url,
+                        connection_id=connection_id
+                    )
                 )
-            )
+            else:
+                tools.append(
+                    OpenApiAgentTool(
+                        spec_url=spec_url
+                    )
+                )
 
         # 4) MCP Tool
         elif tool_type == "mcp":
