@@ -61,3 +61,7 @@ htmlcov/
 *.tmp
 *.bak
 *.swp
+
+# Bicep build artifacts
+*.bicep.json
+**/content_filter.json

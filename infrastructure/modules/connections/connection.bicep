@@ -56,7 +56,6 @@ resource connection 'Microsoft.CognitiveServices/accounts/projects/connections@2
     category: category
     target: targetUrl
     authType: 'CustomKeys'
-    group: 'AzureAI'
     credentials: authType == 'ApiKey' || authType == 'CustomKeys' ? {
       keys:{
           name: 'apiKey'

@@ -9,7 +9,7 @@ Usage:
     python scripts/deploy_infrastructure.py <module> --bicepparam <file>
     
 Example:
-    python scripts/deploy_infrastructure.py foundry_connection --bicepparam infrastructure/nonprod.bicepparam
+    python scripts/deploy_infrastructure.py foundry_connection --bicepparam infrastructure/parameters/connections/connections.bicepparam
 """
 
 import os
@@ -32,7 +32,7 @@ def deploy_infrastructure(module: str, bicepparam_file: str):
     
     # Determine template to deploy
     if module == 'foundry_connection':
-        template_file = 'infrastructure/modules/foundry_connection/connection.bicep'
+        template_file = 'infrastructure/modules/connections/connection.bicep'
     else:
         raise ValueError(f"Unknown module: {module}. Available: foundry_connection")
     
@@ -69,7 +69,7 @@ def main():
     parser = argparse.ArgumentParser(
         description='Deploy infrastructure modules using Bicep parameter files',
         epilog='Examples:\n'
-               '  python scripts/deploy_infrastructure.py foundry_connection --bicepparam infrastructure/nonprod.bicepparam',
+               '  python scripts/deploy_infrastructure.py foundry_connection --bicepparam infrastructure/parameters/connections.bicepparam',
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument('module', 

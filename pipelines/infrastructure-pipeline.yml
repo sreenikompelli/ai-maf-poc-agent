@@ -13,7 +13,7 @@ variables:
   - name: AZURE_SERVICE_CONNECTION
     value: 'ado-service-connection'
   - name: BICEPPARAM_FILE
-    value: 'infrastructure/nonprod.bicepparam'
+    value: 'infrastructure/parameters/connections/connections.bicepparam'
 
 pool:
   name: 'egen-agent-pool'

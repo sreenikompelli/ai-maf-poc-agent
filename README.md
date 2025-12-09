@@ -19,40 +19,59 @@ python -m scripts.deploy_agent \
 ```
 ai-maf-poc-agent/
 ├── agents/
-│   └── weather-agent.yaml           # Agent definition with tools
+│   └── weather-agent.yaml              # Agent definitions
+│
 ├── infrastructure/
-│   ├── nonprod.bicepparam           # Single config file for nonprod
-│   └── modules/
-│       └── foundry_connection/
-│           ├── connection.bicep     # Connection template
-│           └── api.json             # OpenAPI spec
+│   ├── modules/                        # Bicep templates (code)
+│   │   ├── connections/
+│   │   │   ├── connection.bicep
+│   │   │   └── api.json
+│   │   └── guardrails/
+│   │       └── content_filter.bicep
+│   │
+│   └── parameters/                     # Configuration (data)
+│       ├── connections/
+│       │   ├── connections.bicepparam
+│       │   └── api.json
+│       └── guardrails/
+│           └── guardrails.bicepparam
+│
 ├── scripts/
-│   ├── deploy_infrastructure.py     # Deploy connections
-│   ├── deploy_agent.py             # Deploy agents
-│   └── tool_factory.py             # Tool conversion logic
-└── azure-pipelines.yml             # CI/CD pipeline
+│   ├── deploy_infrastructure.py        # Deploy connections
+│   ├── deploy_agent.py                 # Deploy agents
+│   ├── deploy_guardrails.py            # Deploy guardrails
+│   └── tool_factory.py                 # Tool conversion logic
+│
+├── pipelines/
+│   ├── infrastructure-pipeline.yml     # Connection deployment
+│   ├── agent-pipeline.yml              # Agent deployment
+│   └── guardrails-pipeline.yml         # Guardrails deployment
+│
+├── docs/
+│   └── GUARDRAILS.md                   # Guardrails documentation
+│
+└── README.md
 ```
 
 ## ⚙️ Configuration
 
-All configuration is in **one file**: `infrastructure/nonprod.bicepparam`
+All configuration is in: `infrastructure/parameters/`
 
+### Connections (`parameters/connections/connections.bicepparam`)
 ```bicep
-// AI Foundry Project
 param projectName = 'adusa-poc-agent'
-
-// Weather Tool Connection
 param connectionName = 'weathertool'
 param targetUrl = 'https://wttr.in'
-param openApiSpec = loadTextContent('./modules/foundry_connection/api.json')
-param authType = 'CustomKeys'
-param category = 'CustomKeys'
+param openApiSpec = loadTextContent('./api.json')
+```
 
-// Tags
-param tags = {
-  environment: 'nonprod'
-  managedBy: 'devops'
-  project: 'ai-agents'
+### Guardrails (`parameters/guardrails/guardrails.bicepparam`)
+```bicep
+param contentFilterConfig = {
+  hate: { enabled: true, severity: 'medium', blocking: true }
+  sexual: { enabled: true, severity: 'medium', blocking: true }
+  violence: { enabled: true, severity: 'medium', blocking: true }
+  selfHarm: { enabled: true, severity: 'high', blocking: true }
 }
 ```
 
@@ -82,15 +101,16 @@ az login
 
 ```bash
 python scripts/deploy_infrastructure.py foundry_connection \
-  --bicepparam infrastructure/nonprod.bicepparam
+  --bicepparam infrastructure/parameters/connections/connections.bicepparam
 ```
 
-This creates the `weathertool` connection in Azure AI Foundry that:
-- Points to `https://wttr.in`
-- Contains the OpenAPI specification
-- Appears in the Foundry Studio UI
+### 2. Deploy Guardrails
 
-### 2. Deploy Agent
+```bash
+python3 scripts/deploy_guardrails.py nonprod
+```
+
+### 3. Deploy Agent
 
 ```bash
 python -m scripts.deploy_agent \
@@ -201,7 +221,23 @@ Key packages (see `requirements.txt`):
 - `azure-identity==1.25.1` - Authentication
 - `pyyaml==6.0.3` - YAML parsing
 
+## 🛡️ Guardrails (Content Filtering)
+
+Deploy responsible AI guardrails to filter harmful content:
+
+```bash
+python3 scripts/deploy_guardrails.py nonprod
+```
+
+**Features**:
+- Content filtering for hate, sexual, violence, and self-harm
+- Configurable severity levels (low, medium, high)
+- Automatic deployment via CI/CD
+
+**Documentation**: See `docs/GUARDRAILS.md` for full details
+
 ## 🔐 Security Notes
+
 
 - Never commit API keys to git
 - Use Azure Key Vault or pipeline secrets for sensitive values

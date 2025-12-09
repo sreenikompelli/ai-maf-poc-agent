@@ -1,0 +1,83 @@
+name: $(Date:yyyyMMdd)$(Rev:.r)-guardrails
+
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - infrastructure/modules/guardrails/**
+      - infrastructure/guardrails-*.bicepparam
+      - pipelines/guardrails-pipeline.yml
+
+variables:
+  - name: AZURE_SERVICE_CONNECTION
+    value: 'ado-service-connection'
+  - name: RESOURCE_GROUP
+    value: 'ad-usa-poc'
+
+pool:
+  name: 'egen-agent-pool'
+
+stages:
+  - stage: DeployGuardrails
+    displayName: 'Deploy Guardrails'
+    jobs:
+      - job: DeployContentFilters
+        displayName: 'Deploy Content Filters'
+        steps:
+          - checkout: self
+          
+          - bash: |
+              echo "🛡️ Deploying AI Foundry Guardrails"
+              echo "📄 Using bicepparam: infrastructure/parameters/guardrails/guardrails.bicepparam"
+            displayName: 'Show deployment info'
+          
+          - task: AzureCLI@2
+            displayName: 'Validate Bicep template'
+            inputs:
+              azureSubscription: '$(AZURE_SERVICE_CONNECTION)'
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                echo "Validating Bicep template..."
+                az bicep build --file infrastructure/modules/guardrails/content_filter.bicep
+                echo "✅ Bicep template is valid"
+          
+          - task: AzureCLI@2
+            displayName: 'Deploy Content Filter'
+            inputs:
+              azureSubscription: '$(AZURE_SERVICE_CONNECTION)'
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                echo "Deploying content filter..."
+                az deployment group create \
+                  --resource-group $(RESOURCE_GROUP) \
+                  --template-file infrastructure/modules/guardrails/content_filter.bicep \
+                  --parameters infrastructure/parameters/guardrails/guardrails.bicepparam \
+                  --name "guardrails-$(Build.BuildId)"
+                
+                echo "✅ Content filter deployed successfully"
+          
+          - task: AzureCLI@2
+            displayName: 'Verify Deployment'
+            inputs:
+              azureSubscription: '$(AZURE_SERVICE_CONNECTION)'
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                echo "Verifying deployment..."
+                DEPLOYMENT_STATUS=$(az deployment group show \
+                  --resource-group $(RESOURCE_GROUP) \
+                  --name "guardrails-$(Build.BuildId)" \
+                  --query "properties.provisioningState" -o tsv)
+                
+                echo "Deployment status: $DEPLOYMENT_STATUS"
+                
+                if [ "$DEPLOYMENT_STATUS" != "Succeeded" ]; then
+                  echo "❌ Deployment failed"
+                  exit 1
+                fi
+                
+                echo "✅ Deployment verified successfully"

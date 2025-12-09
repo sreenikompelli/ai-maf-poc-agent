@@ -1,0 +1,106 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.39.26.7824",
+      "templateHash": "2206060989800627346"
+    }
+  },
+  "parameters": {
+    "projectName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the AI Foundry project"
+      }
+    },
+    "connectionName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the connection to create"
+      }
+    },
+    "targetUrl": {
+      "type": "string",
+      "metadata": {
+        "description": "Target URL for the API"
+      }
+    },
+    "openApiSpec": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "OpenAPI specification URL or inline spec"
+      }
+    },
+    "apiKey": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "API Key for authentication (optional for public APIs)"
+      }
+    },
+    "authType": {
+      "type": "string",
+      "defaultValue": "CustomKeys",
+      "allowedValues": [
+        "None",
+        "CustomKeys",
+        "OAuth"
+      ],
+      "metadata": {
+        "description": "Auth type"
+      }
+    },
+    "category": {
+      "type": "string",
+      "defaultValue": "CustomKeys",
+      "allowedValues": [
+        "CustomKeys",
+        "ApiKey",
+        "OAuth",
+        "RemoteTool"
+      ],
+      "metadata": {
+        "description": "Connection category"
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Additional metadata tags"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.CognitiveServices/accounts/projects/connections",
+      "apiVersion": "2025-04-01-preview",
+      "name": "[format('{0}/{1}/{2}', parameters('projectName'), parameters('projectName'), parameters('connectionName'))]",
+      "properties": {
+        "category": "[parameters('category')]",
+        "target": "[parameters('targetUrl')]",
+        "authType": "CustomKeys",
+        "group": "AzureAI",
+        "credentials": "[if(or(equals(parameters('authType'), 'ApiKey'), equals(parameters('authType'), 'CustomKeys')), createObject('keys', createObject('name', 'apiKey', 'value', parameters('apiKey'))), null())]",
+        "metadata": "[union(createObject('type', 'openapi', 'OpenApiSpec', parameters('openApiSpec')), parameters('tags'))]"
+      }
+    }
+  ],
+  "outputs": {
+    "connectionId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.CognitiveServices/accounts/projects/connections', parameters('projectName'), parameters('projectName'), parameters('connectionName'))]"
+    },
+    "connectionName": {
+      "type": "string",
+      "value": "[parameters('connectionName')]"
+    },
+    "connectionTarget": {
+      "type": "string",
+      "value": "[parameters('targetUrl')]"
+    }
+  }
+}
