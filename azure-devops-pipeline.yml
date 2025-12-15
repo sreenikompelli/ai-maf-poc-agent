@@ -136,10 +136,15 @@ stages:
           
           - bash: |
               echo "=============================================="
-              echo "🔌 DEPLOYING CONNECTIONS"
+              echo "🔌 DEPLOYING ALL CONNECTIONS"
               echo "=============================================="
               echo "Template: infrastructure/modules/connections/connection.bicep"
-              echo "Parameters: infrastructure/parameters/connections/connections.bicepparam"
+              echo "Parameters: infrastructure/parameters/connections/*.bicepparam"
+              echo ""
+              echo "Connections to deploy:"
+              for f in infrastructure/parameters/connections/*.bicepparam; do
+                echo "  - $f"
+              done
               echo "=============================================="
             displayName: '📋 Show deployment info'
           
@@ -163,18 +168,24 @@ stages:
                 echo "✅ Template is valid"
           
           - task: AzureCLI@2
-            displayName: '🚀 Deploy Connections'
+            displayName: '🚀 Deploy All Connections'
             inputs:
               azureSubscription: '$(AZURE_SERVICE_CONNECTION)'
               scriptType: bash
               scriptLocation: inlineScript
               inlineScript: |
-                echo "Deploying connections..."
+                echo "Deploying all connections..."
                 source .venv/bin/activate
-                python scripts/deploy_infrastructure.py foundry_connection \
-                  --bicepparam infrastructure/parameters/connections/connections.bicepparam
-                
-                echo "✅ Connections deployed successfully"
+
+                for bicepparam in infrastructure/parameters/connections/*.bicepparam; do
+                  echo ""
+                  echo "📦 Deploying: $bicepparam"
+                  python scripts/deploy_infrastructure.py foundry_connection \
+                    --bicepparam "$bicepparam"
+                done
+
+                echo ""
+                echo "✅ All connections deployed successfully"
 
   # ============================================================================
   # STAGE 3: AGENTS (with dependency validation)
