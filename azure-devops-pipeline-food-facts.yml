@@ -1,0 +1,310 @@
+# Azure AI Foundry - Food Facts Agent Deployment Pipeline
+# Deploys guardrails, connections, and food-facts-agent in the correct order with dependency validation
+
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - infrastructure/parameters/connections/openfoodfacts*
+      - agents/food-facts-agent.yaml
+      - scripts/**
+      - azure-devops-pipeline-food-facts.yml
+
+# Runtime parameters for selective deployment
+parameters:
+  - name: deployGuardrails
+    displayName: 'Deploy Guardrails (Content Filters)'
+    type: boolean
+    default: false
+
+  - name: deployConnections
+    displayName: 'Deploy Connections (API Tools)'
+    type: boolean
+    default: true
+
+  - name: deployAgents
+    displayName: 'Deploy Agents'
+    type: boolean
+    default: true
+
+  - name: agentFile
+    displayName: 'Agent File to Deploy'
+    type: string
+    default: 'agents/food-facts-agent.yaml'
+
+variables:
+  - name: AZURE_SERVICE_CONNECTION
+    value: 'ado-service-connection'
+  - name: RESOURCE_GROUP
+    value: 'ad-usa-poc'
+  - name: AI_FOUNDRY_ENDPOINT
+    value: 'https://adusa-poc-agent.services.ai.azure.com/api/projects/adusa-poc-agent'
+  - name: CONNECTION_BICEPPARAM
+    value: 'infrastructure/parameters/connections/openfoodfacts.bicepparam'
+
+pool:
+  name: 'egen-agent-pool'
+
+stages:
+  # ============================================================================
+  # STAGE 1: GUARDRAILS (Content Filters & PII Protection)
+  # ============================================================================
+  - stage: DeployGuardrails
+    displayName: '🛡️ Deploy Guardrails'
+    condition: eq('${{ parameters.deployGuardrails }}', true)
+    jobs:
+      - job: DeployContentFilters
+        displayName: 'Deploy Content Filters'
+        steps:
+          - checkout: self
+
+          - bash: |
+              echo "=============================================="
+              echo "🛡️  DEPLOYING GUARDRAILS"
+              echo "=============================================="
+              echo "Template: infrastructure/modules/guardrails/content_filter.bicep"
+              echo "Parameters: infrastructure/parameters/guardrails/guardrails.bicepparam"
+              echo "=============================================="
+            displayName: '📋 Show deployment info'
+
+          - task: AzureCLI@2
+            displayName: '✅ Validate Bicep template'
+            inputs:
+              azureSubscription: '$(AZURE_SERVICE_CONNECTION)'
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                echo "Validating Bicep template..."
+                az bicep build --file infrastructure/modules/guardrails/content_filter.bicep
+                echo "✅ Template is valid"
+
+          - task: AzureCLI@2
+            displayName: '🚀 Deploy Guardrails'
+            inputs:
+              azureSubscription: '$(AZURE_SERVICE_CONNECTION)'
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                echo "Deploying content filters..."
+                az deployment group create \
+                  --resource-group $(RESOURCE_GROUP) \
+                  --template-file infrastructure/modules/guardrails/content_filter.bicep \
+                  --parameters infrastructure/parameters/guardrails/guardrails.bicepparam \
+                  --name "guardrails-$(Build.BuildId)"
+
+                echo "✅ Guardrails deployed successfully"
+
+          - task: AzureCLI@2
+            displayName: '🔍 Verify Deployment'
+            inputs:
+              azureSubscription: '$(AZURE_SERVICE_CONNECTION)'
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                echo "Verifying deployment..."
+                STATUS=$(az deployment group show \
+                  --resource-group $(RESOURCE_GROUP) \
+                  --name "guardrails-$(Build.BuildId)" \
+                  --query "properties.provisioningState" -o tsv)
+
+                if [ "$STATUS" != "Succeeded" ]; then
+                  echo "❌ Deployment failed with status: $STATUS"
+                  exit 1
+                fi
+
+                echo "✅ Deployment verified: $STATUS"
+
+  # ============================================================================
+  # STAGE 2: CONNECTIONS (Open Food Facts API)
+  # ============================================================================
+  - stage: DeployConnections
+    displayName: '🔌 Deploy Open Food Facts Connection'
+    dependsOn: DeployGuardrails
+    condition: |
+      and(
+        eq('${{ parameters.deployConnections }}', true),
+        or(
+          succeeded(),
+          eq('${{ parameters.deployGuardrails }}', false)
+        )
+      )
+    jobs:
+      - job: DeployAPIConnections
+        displayName: 'Deploy Open Food Facts Connection'
+        steps:
+          - checkout: self
+
+          - bash: |
+              echo "=============================================="
+              echo "🔌 DEPLOYING OPEN FOOD FACTS CONNECTION"
+              echo "=============================================="
+              echo "Template: infrastructure/modules/connections/connection.bicep"
+              echo "Parameters: $(CONNECTION_BICEPPARAM)"
+              echo "=============================================="
+            displayName: '📋 Show deployment info'
+
+          - bash: |
+              echo "Creating virtual environment..."
+              python3 -m venv .venv
+              source .venv/bin/activate
+              echo "Installing dependencies..."
+              pip install -q -r requirements.txt
+            displayName: '📦 Install dependencies'
+
+          - task: AzureCLI@2
+            displayName: '✅ Validate Bicep template'
+            inputs:
+              azureSubscription: '$(AZURE_SERVICE_CONNECTION)'
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                echo "Validating Bicep template..."
+                az bicep build --file infrastructure/modules/connections/connection.bicep
+                echo "✅ Template is valid"
+
+          - task: AzureCLI@2
+            displayName: '🚀 Deploy Open Food Facts Connection'
+            inputs:
+              azureSubscription: '$(AZURE_SERVICE_CONNECTION)'
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                echo "Deploying Open Food Facts connection..."
+                source .venv/bin/activate
+                python scripts/deploy_infrastructure.py foundry_connection \
+                  --bicepparam $(CONNECTION_BICEPPARAM)
+
+                echo "✅ Connection deployed successfully"
+
+  # ============================================================================
+  # STAGE 3: AGENT (Food Facts Agent)
+  # ============================================================================
+  - stage: DeployAgents
+    displayName: '🤖 Deploy Food Facts Agent'
+    dependsOn:
+      - DeployGuardrails
+      - DeployConnections
+    condition: |
+      and(
+        eq('${{ parameters.deployAgents }}', true),
+        or(
+          succeeded(),
+          and(
+            eq('${{ parameters.deployGuardrails }}', false),
+            eq('${{ parameters.deployConnections }}', false)
+          )
+        )
+      )
+    jobs:
+      - job: ValidateDependencies
+        displayName: 'Validate Agent Dependencies'
+        steps:
+          - checkout: self
+
+          - bash: |
+              echo "Creating virtual environment..."
+              python3 -m venv .venv
+              source .venv/bin/activate
+              pip install -q pyyaml
+            displayName: '📦 Install PyYAML'
+
+          - bash: |
+              echo "=============================================="
+              echo "🔍 VALIDATING AGENT DEPENDENCIES"
+              echo "=============================================="
+
+              AGENT_FILE="${{ parameters.agentFile }}"
+
+              if [ -z "$AGENT_FILE" ]; then
+                echo "No specific agent file provided, using default"
+                AGENT_FILE="agents/food-facts-agent.yaml"
+              fi
+
+              echo "Checking agent file: $AGENT_FILE"
+
+              if [ ! -f "$AGENT_FILE" ]; then
+                echo "❌ Agent file not found: $AGENT_FILE"
+                exit 1
+              fi
+
+              echo "✅ Agent file exists"
+              echo "=============================================="
+            displayName: '🔍 Validate dependencies'
+            failOnStderr: false
+
+      - job: DeployAgentJob
+        displayName: 'Deploy Food Facts Agent'
+        dependsOn: ValidateDependencies
+        steps:
+          - checkout: self
+
+          - bash: |
+              echo "Creating virtual environment..."
+              python3 -m venv .venv
+              source .venv/bin/activate
+              echo "Installing dependencies..."
+              pip install -q -r requirements.txt
+            displayName: '📦 Install dependencies'
+
+          - task: AzureCLI@2
+            displayName: '🚀 Deploy Food Facts Agent'
+            inputs:
+              azureSubscription: '$(AZURE_SERVICE_CONNECTION)'
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                echo "=============================================="
+                echo "🤖 DEPLOYING FOOD FACTS AGENT"
+                echo "=============================================="
+
+                AGENT_FILE="${{ parameters.agentFile }}"
+
+                if [ -z "$AGENT_FILE" ]; then
+                  AGENT_FILE="agents/food-facts-agent.yaml"
+                fi
+
+                echo "Agent file: $AGENT_FILE"
+                echo "Endpoint: $(AI_FOUNDRY_ENDPOINT)"
+                echo ""
+
+                source .venv/bin/activate
+                python -m scripts.deploy_agent \
+                  "$(AI_FOUNDRY_ENDPOINT)" \
+                  "$AGENT_FILE"
+
+                echo ""
+                echo "✅ Food Facts Agent deployed successfully"
+                echo "=============================================="
+
+  # ============================================================================
+  # STAGE 4: SUMMARY
+  # ============================================================================
+  - stage: DeploymentSummary
+    displayName: '📊 Deployment Summary'
+    dependsOn:
+      - DeployGuardrails
+      - DeployConnections
+      - DeployAgents
+    condition: always()
+    jobs:
+      - job: ShowSummary
+        displayName: 'Show Deployment Summary'
+        steps:
+          - bash: |
+              echo "=============================================="
+              echo "📊 FOOD FACTS AGENT DEPLOYMENT SUMMARY"
+              echo "=============================================="
+              echo ""
+              echo "Deployment Selections:"
+              echo "  🛡️  Guardrails:  ${{ parameters.deployGuardrails }}"
+              echo "  🔌 Connections: ${{ parameters.deployConnections }}"
+              echo "  🤖 Agents:      ${{ parameters.deployAgents }}"
+              echo ""
+              echo "Agent File: ${{ parameters.agentFile }}"
+              echo "Connection: $(CONNECTION_BICEPPARAM)"
+              echo ""
+              echo "Build ID: $(Build.BuildId)"
+              echo "=============================================="
+            displayName: '📋 Summary'
