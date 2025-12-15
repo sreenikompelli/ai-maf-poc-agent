@@ -1,0 +1,142 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "Open Food Facts API",
+        "description": "Retrieves grocery product information including nutrition facts, ingredients, and allergens from the Open Food Facts database.",
+        "version": "v2.0.0"
+    },
+    "servers": [
+        {
+            "url": "https://world.openfoodfacts.org"
+        }
+    ],
+    "auth": [],
+    "paths": {
+        "/api/v2/product/{barcode}": {
+            "get": {
+                "description": "Get detailed product information by barcode (UPC, EAN, etc.)",
+                "operationId": "GetProductByBarcode",
+                "parameters": [
+                    {
+                        "name": "barcode",
+                        "in": "path",
+                        "description": "Product barcode (UPC, EAN-13, etc.) - e.g., 737628064502",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "fields",
+                        "in": "query",
+                        "description": "Comma-separated list of fields to return. Use: product_name,brands,nutrition_grades,nutriments,ingredients_text,allergens,categories,image_url",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "product_name,brands,nutrition_grades,nutriments,ingredients_text,allergens,categories,image_url"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Product found successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Product not found"
+                    }
+                },
+                "deprecated": false
+            }
+        },
+        "/cgi/search.pl": {
+            "get": {
+                "description": "Search for products by name, brand, or category",
+                "operationId": "SearchProducts",
+                "parameters": [
+                    {
+                        "name": "search_terms",
+                        "in": "query",
+                        "description": "Search query - product name, brand, or keywords (e.g., 'cheerios', 'coca-cola', 'organic milk')",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "search_simple",
+                        "in": "query",
+                        "description": "Use simple search mode",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "action",
+                        "in": "query",
+                        "description": "Action type - always use 'process'",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "default": "process"
+                        }
+                    },
+                    {
+                        "name": "json",
+                        "in": "query",
+                        "description": "Return JSON format - always use 1",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "page_size",
+                        "in": "query",
+                        "description": "Number of results to return (1-100)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 10
+                        }
+                    },
+                    {
+                        "name": "fields",
+                        "in": "query",
+                        "description": "Comma-separated list of fields to return",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "product_name,brands,nutrition_grades,nutriments,ingredients_text,allergens,code"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Search results returned successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "deprecated": false
+            }
+        }
+    },
+    "components": {
+        "schemes": {}
+    }
+}

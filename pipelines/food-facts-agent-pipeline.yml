@@ -1,4 +1,4 @@
-name: $(Date:yyyyMMdd)$(Rev:.r)-agent
+name: $(Date:yyyyMMdd)$(Rev:.r)-food-facts-agent
 
 trigger:
   branches:
@@ -6,42 +6,31 @@ trigger:
       - main
   paths:
     include:
-      - agents/**
-      - scripts/**
-      - pipelines/agent-pipeline.yml
-    exclude:
-      - infrastructure/**
-
-# Runtime Parameters
-parameters:
-  - name: agentFile
-    displayName: 'Agent to Deploy'
-    type: string
-    default: 'weather-agent.yaml'
-    values:
-      - weather-agent.yaml
-      - food-facts-agent.yaml
+      - agents/food-facts-agent.yaml
+      - pipelines/food-facts-agent-pipeline.yml
 
 variables:
   - name: AZURE_SERVICE_CONNECTION
     value: 'ado-service-connection'
   - name: FOUNDRY_ENDPOINT
     value: 'https://adusa-poc-agent.services.ai.azure.com/api/projects/adusa-poc-agent'
+  - name: AGENT_YAML_PATH
+    value: 'agents/food-facts-agent.yaml'
 
 pool:
   name: 'egen-agent-pool'
 
 steps:
   - checkout: self
-  
+
   - bash: |
-      echo "🤖 Deploying Agent"
-      echo "📄 Selected Agent: ${{ parameters.agentFile }}"
+      echo "🤖 Deploying Food Facts Agent"
+      echo "📄 Agent: $(AGENT_YAML_PATH)"
       echo "🔗 Endpoint: $(FOUNDRY_ENDPOINT)"
     displayName: 'Show deployment info'
-  
+
   - task: AzureCLI@2
-    displayName: 'Deploy agent with tools'
+    displayName: 'Deploy food-facts-agent'
     inputs:
       azureSubscription: '$(AZURE_SERVICE_CONNECTION)'
       scriptType: bash
@@ -52,6 +41,6 @@ steps:
         source .venv/bin/activate
         pip install -q --upgrade pip
         pip install -q -r requirements.txt
-        
+
         # Deploy agent (uses DefaultAzureCredential with AzureCLI context)
-        .venv/bin/python -m scripts.deploy_agent "$(FOUNDRY_ENDPOINT)" "agents/${{ parameters.agentFile }}"
+        .venv/bin/python -m scripts.deploy_agent "$(FOUNDRY_ENDPOINT)" "$(AGENT_YAML_PATH)"
