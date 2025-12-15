@@ -4,7 +4,7 @@ parameters:
   - name: azureServiceConnection
     displayName: 'Azure Subscription Service Connection'
     type: string
-    default: 'azure-connection'
+    default: 'ado-service-connection'
   - name: acrName
     displayName: 'Azure Container Registry Name (without .azurecr.io)'
     type: string
@@ -27,7 +27,7 @@ variables:
   tag: '$(Build.BuildId)'
 
 pool:
-  vmImage: 'ubuntu-latest'
+  name: 'egen-agent-pool'
 
 steps:
 - task: AzureCLI@2
