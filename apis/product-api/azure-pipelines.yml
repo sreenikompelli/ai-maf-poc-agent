@@ -8,7 +8,7 @@ parameters:
   - name: acrName
     displayName: 'Azure Container Registry Name (without .azurecr.io)'
     type: string
-    default: 'myacr'
+    default: 'adusapocdev'
   - name: buildContext
     displayName: 'Build Context (Directory)'
     type: string
