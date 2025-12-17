@@ -1,8 +1,11 @@
 // Bicep module for creating Azure AI Foundry OpenAPI Tool Connections
 // This creates a connection that includes both authentication AND the OpenAPI specification
 
-@description('Name of the AI Foundry project')
-param projectName string
+@description('Name of the AI Foundry account (hub)')
+param accountName string
+
+@description('Name of the AI Foundry project (defaults to accountName if not specified)')
+param projectName string = ''
 
 @description('Name of the connection to create')
 param connectionName string
@@ -37,15 +40,18 @@ param category string = 'CustomKeys'
 @description('Additional metadata tags')
 param tags object = {}
 
+// Compute the actual project name (use projectName if provided, otherwise use accountName)
+var actualProjectName = empty(projectName) ? accountName : projectName
+
 // Reference to existing AI Foundry account (hub)
 resource aiAccount 'Microsoft.CognitiveServices/accounts@2025-04-01-preview' existing = {
-  name: projectName
+  name: accountName
 }
 
 // Reference to existing AI Foundry project
 resource aiFoundryProject 'Microsoft.CognitiveServices/accounts/projects@2025-04-01-preview' existing = {
   parent: aiAccount
-  name: projectName
+  name: actualProjectName
 }
 
 // Create the OpenAPI tool connection

@@ -4,6 +4,7 @@
 using '../../modules/connections/connection.bicep'
 
 // Project Configuration
+param accountName = 'adusa-poc-agent'
 param projectName = 'adusa-poc-agent'
 
 // Connection Settings

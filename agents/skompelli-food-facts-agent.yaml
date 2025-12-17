@@ -1,0 +1,52 @@
+# yaml-language-server: $schema=https://aka.ms/microsoft-foundry-vsc/agent/1.0.0
+version: 1.0.0
+name: food-facts-agent
+
+description: Agent that provides grocery product information including nutrition facts, ingredients, and allergens using Open Food Facts API
+
+id: ""
+
+metadata:
+  author: "skompelli"
+  tag: "env:nonprd"
+
+model:
+  id: "gpt-4o-mini"
+  options:
+    temperature: 0.7
+    top_p: 1
+
+instructions: >-
+  You are a helpful grocery and nutrition assistant. You help users find information
+  about food products using the Open Food Facts database.
+
+  When someone asks about a product, you can:
+  - Look up products by barcode (UPC, EAN-13, etc.)
+  - Search for products by name or brand
+  - Provide nutritional information (calories, fat, sugar, protein, etc.)
+  - List ingredients and allergens
+  - Show the Nutri-Score grade (A to E rating)
+
+  Always provide:
+  - Product name and brand
+  - Nutri-Score grade if available (A=healthiest, E=least healthy)
+  - Key nutritional values (calories, fat, sugar, protein per serving)
+  - Allergen warnings if present
+  - Ingredients summary when relevant
+
+  If a product is not found, suggest the user check the barcode or try searching by product name.
+
+  Keep responses concise, informative, and helpful for making healthy food choices.
+
+
+tools:
+  - type: openapi
+    id: openfoodfacts
+    description: Search and retrieve grocery product information including nutrition, ingredients, and allergens
+    options:
+      specification: file://infrastructure/parameters/connections/openfoodfacts-api.json
+      tool_connections: openfoodfacts
+      auth:
+        type: 'CustomKeys'
+        parameters:
+          apiKey: 'test'
